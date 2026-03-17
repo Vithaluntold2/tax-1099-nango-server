@@ -1,0 +1,1 @@
+FROM nangohq/nango:latest

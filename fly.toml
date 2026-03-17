@@ -1,0 +1,42 @@
+# Nango self-hosted server for TaxBlitz
+# App URL: https://taxblitz-nango.fly.dev
+#
+# Required secrets (set via `fly secrets set -a taxblitz-nango`):
+#   NANGO_DB_URL         — from `fly postgres attach taxblitz-nango-db`
+#   NANGO_REDIS_URL      — from Upstash Redis (fly ext redis create)
+#   NANGO_SECRET_KEY     — generate: openssl rand -hex 32
+#   NANGO_PUBLIC_KEY     — generate: uuidgen | tr '[:upper:]' '[:lower:]'
+#   ENCRYPT_KEY          — generate: openssl rand -hex 16  (exactly 32 hex chars)
+
+app = 'taxblitz-nango'
+primary_region = 'sjc'
+
+[build]
+
+[env]
+  SERVER_PORT        = "3003"
+  NANGO_SERVER_URL   = "https://taxblitz-nango.fly.dev"
+  # Records backend uses Fly Postgres — NANGO_DB_URL injected via secrets
+  # Jobs queue uses Redis — NANGO_REDIS_URL injected via secrets
+
+[http_service]
+  internal_port        = 3003
+  force_https          = true
+  auto_stop_machines   = 'off'
+  auto_start_machines  = true
+  min_machines_running = 1
+  processes            = ['app']
+
+  [http_service.concurrency]
+    type       = "requests"
+    hard_limit = 200
+    soft_limit = 150
+
+[[vm]]
+  memory   = '2gb'
+  cpu_kind = 'shared'
+  cpus     = 2
+
+[mounts]
+  source      = 'nango_data'
+  destination = '/var/nango'
