@@ -1,1 +1,1 @@
-FROM nangohq/nango:latest
+FROM nangohq/nango-server:latest

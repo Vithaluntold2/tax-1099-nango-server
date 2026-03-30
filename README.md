@@ -1,33 +1,33 @@
-# TaxBlitz Nango — Self-Hosted on Fly.io
+# TaxBlitz Nango — Self-Hosted on Railway
 
-Self-hosted Nango server running at `https://taxblitz-nango.fly.dev`.
+Self-hosted Nango server running at `https://taxblitz-nango-production.up.railway.app`.
 
 ---
 
 ## One-Time Setup
 
-### 1. Create the Fly app
+### 1. Create the Railway project
 
 ```bash
-fly apps create taxblitz-nango --region sjc
+railway init taxblitz-nango --region sjc
 ```
 
-### 2. Create a Fly Postgres cluster
+### 2. Create a Railway PostgreSQL database
 
 ```bash
-fly postgres create --name taxblitz-nango-db --region sjc --initial-cluster-size 1 --vm-size shared-cpu-1x --volume-size 10
-# Attach it — Fly injects DATABASE_URL automatically:
-fly postgres attach taxblitz-nango-db -a taxblitz-nango
+railway add --plugin postgresql --name taxblitz-nango-db --region sjc --initial-cluster-size 1 --vm-size shared-cpu-1x --volume-size 10
+# Attach it — Railway injects DATABASE_URL automatically:
+railway connect postgresql taxblitz-nango-db -a taxblitz-nango
 # Then rename to NANGO_DB_URL:
-fly secrets set NANGO_DB_URL="$(fly postgres connect -a taxblitz-nango-db --print-url)" -a taxblitz-nango
+railway variables set NANGO_DB_URL="$(railway connect postgresql -a taxblitz-nango-db --print-url)" -a taxblitz-nango
 ```
 
 ### 3. Create an Upstash Redis instance
 
 ```bash
-fly ext redis create --name taxblitz-nango-redis --region sjc
+railway add redis --name taxblitz-nango-redis --region sjc
 # Note the connection URL shown, then:
-fly secrets set NANGO_REDIS_URL="<redis_url>" -a taxblitz-nango
+railway variables set NANGO_REDIS_URL="<redis_url>" -a taxblitz-nango
 ```
 
 ### 4. Generate and set secrets
@@ -37,7 +37,7 @@ NANGO_SECRET=$(openssl rand -hex 32)
 NANGO_PUBLIC=$(uuidgen | tr '[:upper:]' '[:lower:]')
 ENCRYPT=$(openssl rand -hex 16)
 
-fly secrets set \
+railway variables set \
   NANGO_SECRET_KEY="$NANGO_SECRET" \
   NANGO_PUBLIC_KEY="$NANGO_PUBLIC" \
   ENCRYPT_KEY="$ENCRYPT" \
@@ -48,24 +48,24 @@ fly secrets set \
 
 ```bash
 cd nango-server
-fly deploy --remote-only
+railway up --detach --remote-only
 ```
 
 ### 6. Verify
 
 ```bash
-curl https://taxblitz-nango.fly.dev/healthcheck
+curl https://taxblitz-nango-production.up.railway.app/healthcheck
 ```
 
 ---
 
 ## Configure TaxBlitz backend & frontend
 
-Set these two env vars on your **backend** Fly app:
+Set these two env vars on your **backend** Railway service:
 
 ```bash
-fly secrets set \
-  NANGO_BASE_URL="https://taxblitz-nango.fly.dev" \
+railway variables set \
+  NANGO_BASE_URL="https://taxblitz-nango-production.up.railway.app" \
   NANGO_SECRET_KEY="$NANGO_SECRET" \
   NANGO_PUBLIC_KEY="$NANGO_PUBLIC" \
   -a taxblitz-backend
@@ -79,7 +79,7 @@ The frontend reads `host` from the `/api/v1/nango/config` endpoint automatically
 
 ```bash
 cd nango-integrations
-NANGO_HOSTPORT=https://taxblitz-nango.fly.dev \
+NANGO_HOSTPORT=https://taxblitz-nango-production.up.railway.app \
 NANGO_SECRET_KEY=<your_secret_key> \
 npx nango deploy
 ```
@@ -89,5 +89,5 @@ npx nango deploy
 ## Redeploy (updates)
 
 ```bash
-cd nango-server && fly deploy --remote-only
+cd nango-server && railway up --detach --remote-only
 ```
